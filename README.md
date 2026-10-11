@@ -17,7 +17,8 @@
     <img src="https://img.shields.io/badge/license-Proprietary-red" alt="License" />
     <img src="https://img.shields.io/badge/PS--26148-NTRO-green" alt="SIH PS 26148" />
     <img src="https://img.shields.io/badge/LLVM-18+-orange" alt="LLVM" />
-    <img src="https://img.shields.io/badge/compiler-Rust-brown" alt="Rust" />
+    <img src="https://img.shields.io/badge/compiler-C++-blue" alt="C++" />
+    <img src="https://img.shields.io/badge/runtime-C%20%2B%20ASM-lightgrey" alt="C + ASM" />
   </p>
 </p>
 
@@ -155,7 +156,7 @@ JOCKEY uses a **two-tier IR system** built on top of LLVM:
 .jky source
   │
   ▼
-jocky-frontend (Rust: lexer → parser → AST → semantic analysis)
+jocky-frontend (C++: Flex lexer → parser → AST → semantic analysis)
   │
   ▼
 JOCKY IR (high-level, domain-specific)
@@ -164,7 +165,7 @@ JOCKY IR (high-level, domain-specific)
   │  The effect/privilege typechecker runs HERE — rejects invalid programs
   │
   ▼
-JOCKY IR → LLVM IR lowering pass (Rust via inkwell)
+JOCKY IR → LLVM IR lowering pass (C++ via LLVM API)
   │  Platform-specific lowering: Windows vs Linux code paths selected here
   │
   ▼
@@ -177,7 +178,7 @@ LLVM IR (standard)
 LLVM Backend (x86-64 / AArch64 code generation)
   │
   ▼
-Custom PE/ELF emitter (Rust, replaces lld)
+Custom PE/ELF emitter (C++, replaces lld)
   │  Toolchain profile forging: Rich header, section layout, timestamps
   │  Import table: empty (all imports resolved at runtime via PEB walk)
   │  String section: encrypted blobs only
@@ -215,21 +216,25 @@ Unique polymorphic binary
 
 | Component | Language / Tool | Rationale |
 |-----------|----------------|-----------|
-| Compiler frontend (lexer/parser/AST) | **Rust** | Memory-safe, `logos` + `chumsky` crates, exhaustive pattern matching |
-| JOCKY IR + typechecker | **Rust** | Same binary as frontend; enum-based IR with compile-time exhaustiveness |
-| JOCKY IR → LLVM IR lowering | **Rust** via `inkwell` | Safe Rust wrapper around LLVM C-API |
-| Obfuscation passes | **C++** LLVM pass plugins | LLVM pass infrastructure is C++; all OLLVM literature is C++ |
+| Compiler frontend (lexer/parser/AST) | **C++** with **Flex** lexer generator | Direct integration with LLVM C++ API; Flex is mature and zero-dependency |
+| JOCKY IR + typechecker | **C++** | Same binary as frontend; direct LLVM API access without bindings layer |
+| JOCKY IR → LLVM IR lowering | **C++** via **LLVM C++ API** | Direct API usage — no wrapper overhead, full access to LLVM internals |
+| Obfuscation passes (OLLVM-style) | **C++** LLVM pass plugins | LLVM pass infrastructure is C++; all OLLVM forks and literature are C++ |
 | Code generation | **LLVM 18+** backend | Industrial-grade x86-64 / AArch64 codegen |
-| Custom PE/ELF emitter | **Rust** using `object` crate | Full control over headers, section layout, import table |
-| `jrt-core` runtime | **C + x86-64 ASM** | Must be tiny, position-independent, no CRT |
-| `jrt-blind` | **C** | Kernel interaction via `DeviceIoControl` / ioctl |
+| Custom PE/ELF emitter | **C++** (replaces `lld`) | Full control over Rich header, section layout, import table, toolchain profiles |
+| `jrt-core` runtime | **Bare C + inline x86-64 ASM** | Must be tiny, position-independent, no CRT, zero external dependencies |
+| `jrt-blind` | **C** | Kernel interaction via `DeviceIoControl` / ioctl; precise struct layout control |
 | `jrt-escalate` SDK | **C++** headers | Operator-extensible; C++ gives RAII + SDK ergonomics |
 | Forensic scripts | **JOCKY DSL** (`.jky`) | The deliverables — written in our language |
-| C2 server | **Go** | Single static binary, goroutines for multi-implant |
-| Console (web UI) | **React + TypeScript** | Standard web dashboard with real-time WebSocket feeds |
-| Owned TLS stack | **Rust** via `rustls` | Full control over TLS handshake for JA3/JA4 mimicry |
+| C2 server | **C++** single-binary executable | Embeds web console; no runtime dependencies on target |
+| Console (web UI) | **Vanilla JS** (embedded in C2 binary) | Lightweight, no framework overhead, served directly by C2 server |
+| Custom TLS 1.3 stack | **C++** | Full control over TLS handshake bytes for JA3/JA4 browser-profile mimicry |
+| Result storage | **SQLite** (encrypted, per-mission) | Zero-dependency, portable, mission data isolated |
+| Evidence signing | **Ed25519** | Cryptographic non-repudiation for chain-of-custody |
 | CI/CD pipeline | **Python** + **Docker** | Build orchestration, seed generation, attestation |
 | Invariant test suite | **Python** + Sysmon/Falco + YARA | Automated verification of all envelope guarantees |
+
+> **All technical dependencies are open-source.** LLVM, Flex, SQLite, and the cryptographic primitives are mature, widely-deployed projects. No proprietary or foreign-controlled components are used anywhere in the stack.
 
 ---
 
@@ -239,11 +244,10 @@ Unique polymorphic binary
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| Rust | 1.75+ | Compiler frontend, PE/ELF emitter, TLS stack |
-| LLVM | 18+ | Code generation, obfuscation pass host |
-| Clang/GCC | 13+ | Building C/C++ runtime components and LLVM passes |
-| Go | 1.21+ | C2 server compilation |
-| Node.js | 20 LTS | Console web UI build |
+| Clang/GCC | 13+ | Compiler frontend, runtime, PE/ELF emitter, C2 server |
+| LLVM | 18+ | Code generation, IR lowering, obfuscation pass host |
+| Flex | 2.6+ | Lexer generator for the JOCKY frontend |
+| CMake | 3.20+ | Build system for compiler, passes, and C2 server |
 | Python | 3.11+ | CI/CD pipeline, attestation scripts, test harness |
 | Docker | 24+ | Reproducible builds (recommended) |
 | NASM | 2.16+ | x86-64 assembly for syscall stubs |
@@ -255,8 +259,11 @@ Unique polymorphic binary
 git clone https://github.com/your-org/jockey.git
 cd jockey
 
-# Build the compiler (jockyc)
-cargo build --release --manifest-path compiler/Cargo.toml
+# Build the compiler (jockyc) + PE/ELF emitter
+mkdir -p compiler/build && cd compiler/build
+cmake .. -DLLVM_DIR=$(llvm-config --cmakedir) -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+cd ../..
 
 # Build the LLVM obfuscation passes
 mkdir -p passes/build && cd passes/build
@@ -267,14 +274,14 @@ cd ../..
 # Build the runtime (jrt-core, jrt-blind, jrt-escalate)
 make -C runtime all
 
-# Build the C2 server
-cd c2-server && go build -o jockey-c2 ./cmd/server && cd ..
-
-# Build the console web UI
-cd console && npm install && npm run build && cd ..
+# Build the C2 server (single binary, embeds web console)
+mkdir -p c2-server/build && cd c2-server/build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+cd ../..
 
 # Verify installation
-./target/release/jockyc --version
+./compiler/build/jockyc --version
 ```
 
 ### Docker (Recommended for CI)
@@ -607,8 +614,8 @@ All vectors enforce: **no page is ever W+X; executable memory is always file-bac
 
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
-| Console frontend | React + TypeScript | Real-time dashboard with WebSocket feeds |
-| API server | Go single binary | Cross-platform, no runtime deps, embeds web UI |
+| Console frontend | Vanilla JS (embedded in server binary) | Lightweight, no framework overhead, zero build dependencies |
+| API server | C++ single-binary executable | Cross-platform, no runtime deps, embeds web UI |
 | Result storage | Encrypted SQLite (per-mission) | Zero-dependency, portable, isolated |
 | Authentication | JWT + RBAC | Operator (full) / Analyst (read + limited task) / Readonly |
 | Audit log | Append-only JSON Lines, signed per entry | Tamper-evident; every action recorded |
@@ -737,16 +744,16 @@ Every build is verified against these invariants:
 
 ```
 jockey/
-├── compiler/                    # Rust — JOCKY compiler (jockyc)
+├── compiler/                    # C++ — JOCKY compiler (jockyc)
 │   ├── src/
-│   │   ├── lexer/               # Lexer (logos crate)
-│   │   ├── parser/              # Parser (chumsky/lalrpop)
+│   │   ├── lexer/               # Lexer (Flex-generated)
+│   │   ├── parser/              # Parser
 │   │   ├── ast/                 # AST definitions
 │   │   ├── ir/                  # JOCKY IR opcodes + effect/privilege types
 │   │   ├── typechecker/         # Effect/privilege typechecker
-│   │   ├── lowering/            # JOCKY IR → LLVM IR (via inkwell)
-│   │   └── emitter/             # Custom PE/ELF emitter (object crate)
-│   └── Cargo.toml
+│   │   ├── lowering/            # JOCKY IR → LLVM IR (via LLVM C++ API)
+│   │   └── emitter/             # Custom PE/ELF emitter (replaces lld)
+│   └── CMakeLists.txt
 ├── passes/                      # C++ — LLVM obfuscation pass plugins
 │   ├── cfg_flatten/
 │   ├── mba/
@@ -755,13 +762,13 @@ jockey/
 │   ├── dead_code/
 │   ├── block_shuffle/
 │   └── CMakeLists.txt
-├── runtime/                     # C + ASM — Runtime components
+├── runtime/                     # Bare C + inline ASM — Runtime components
 │   ├── jrt-core/                # Envelope enforcer
-│   │   ├── syscall/             # Indirect syscall stubs (ASM)
+│   │   ├── syscall/             # Indirect syscall stubs (inline ASM)
 │   │   ├── allocator/           # No-W+X memory allocator
 │   │   ├── exec/                # File-backed execution substrate
 │   │   ├── crypto/              # String decryption, stack zeroing
-│   │   ├── tls/                 # Owned TLS stack (JA3 mimicry)
+│   │   ├── tls/                 # Custom TLS 1.3 stack (JA3 mimicry)
 │   │   └── spoof/               # Synthetic stack frames
 │   ├── jrt-escalate/            # Privilege escalation interface
 │   │   ├── include/             # C++ SDK headers (IEscalationModule)
@@ -789,24 +796,21 @@ jockey/
 │   ├── ioc_sweep.jky
 │   ├── rootkit_detect.jky
 │   └── autoruns.jky
-├── c2-server/                   # Go — C2 server
-│   ├── cmd/server/
-│   ├── internal/
+├── c2-server/                   # C++ — C2 server (single binary, embeds console)
+│   ├── src/
+│   │   ├── server/              # HTTP/WebSocket server + TLS
 │   │   ├── tasking/             # Task queue + dispatch
 │   │   ├── transport/           # Cloud API profiles (GDrive, S3, Azure, GCS)
 │   │   ├── storage/             # Encrypted SQLite per-mission
 │   │   ├── auth/                # JWT + RBAC
 │   │   └── audit/               # Append-only signed audit log
-│   └── go.mod
-├── console/                     # React + TypeScript — Web dashboard
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Dashboard/
-│   │   │   ├── MissionManager/
-│   │   │   └── ForensicViewer/
-│   │   └── components/
-│   ├── package.json
-│   └── tsconfig.json
+│   ├── web/                     # Vanilla JS — embedded web console
+│   │   ├── index.html
+│   │   ├── dashboard.js
+│   │   ├── mission.js
+│   │   ├── forensic-viewer.js
+│   │   └── style.css
+│   └── CMakeLists.txt
 ├── pipeline/                    # Python — CI/CD polymorphic pipeline
 │   ├── build.py                 # Orchestrator
 │   ├── attest.py                # Build attestation + footprint report
