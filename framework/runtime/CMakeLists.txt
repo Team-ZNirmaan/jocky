@@ -16,6 +16,10 @@ add_library(jrt-core STATIC
     jrt-core/init.c
 )
 
+target_include_directories(jrt-core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/jrt-core   # "syscall/…", "allocator/…", "jrt_core.h"
+)
+
 target_compile_options(jrt-core PRIVATE
     -nostdlib           # No C standard library
     -fno-stack-protector
@@ -50,5 +54,8 @@ add_library(jrt-blind STATIC
     jrt-blind/linux/ebpf_detach.c
     jrt-blind/linux/lkm_control.c
     jrt-blind/blind.c
+)
+target_include_directories(jrt-blind PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/jrt-blind
 )
 target_link_libraries(jrt-blind PRIVATE jrt-core)
