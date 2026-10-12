@@ -1,0 +1,8 @@
+// timeline_build.jky — super-timeline with per-entry hashes (Both)
+artifact timeline_build {
+  requires L0
+  emits super_timeline, per_entry_hashes
+
+  collect proc_meta
+  collect proc_meta | timeline | hash_all | upload
+}

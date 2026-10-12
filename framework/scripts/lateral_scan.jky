@@ -1,0 +1,8 @@
+// lateral_scan.jky — detect lateral movement: SMB/RDP/WinRM/PsExec/SSH (Both)
+artifact lateral_scan {
+  requires L1
+  emits smb, rdp, winrm, psexec, dcom, ssh
+
+  collect network_connections
+  collect network_connections | filter(port == "445") | timeline | upload
+}

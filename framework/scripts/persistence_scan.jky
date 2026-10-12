@@ -1,0 +1,9 @@
+// persistence_scan.jky — autostart enumeration: Run keys, tasks, cron, units (L1)
+artifact persistence_scan {
+  requires L1
+  emits run_keys, startup, tasks, wmi_subs, lsa_providers, cron_jobs, systemd_units
+
+  collect persistence
+  persist(method: CRON)
+  collect persistence | timeline | hash_all | upload
+}

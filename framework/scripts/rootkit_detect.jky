@@ -1,0 +1,13 @@
+// rootkit_detect.jky — differential detection: API vs raw kernel enumeration (L2)
+artifact rootkit_detect {
+  requires L2
+  emits hidden_processes, hidden_modules, hidden_connections
+
+  // Collect via normal API
+  collect proc_meta
+  // Collect via raw kernel structures (needs blind/L2 for kernel R/W)
+  // The runtime compares API vs kernel and reports discrepancies
+  collect proc_meta(mode: KERNEL_DIRECT)
+  // Diff and alert
+  ioc_check | alert | upload
+}

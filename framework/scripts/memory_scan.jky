@@ -1,0 +1,8 @@
+// memory_scan.jky — consented memory dump + offline analysis (Both)
+artifact memory_scan {
+  requires L1
+  emits strings, handles, sockets, yara, injected_threads
+
+  collect memory
+  collect memory | hash_all | upload
+}

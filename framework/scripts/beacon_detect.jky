@@ -1,0 +1,9 @@
+// beacon_detect.jky — outbound beaconing pattern analysis (Both)
+artifact beacon_detect {
+  requires L0
+  emits periodic_c2, jitter, sleep_patterns
+
+  beacon(profile: CDN_FRONT, jitter: 0.3)
+  collect network_connections
+  collect network_connections | timeline | ioc_check | alert | upload
+}

@@ -1,0 +1,48 @@
+FROM ubuntu:24.04 AS jockey-build
+
+# Pinned versions for reproducibility
+ENV LLVM_VERSION=18
+ENV FLEX_VERSION=2.6.4
+ENV CMAKE_VERSION=3.28
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake=${CMAKE_VERSION}* \
+    flex \
+    nasm \
+    python3 python3-pip python3-venv \
+    libsqlite3-dev \
+    git \
+    curl \
+    ca-certificates \
+    lsb-release \
+    wget \
+    software-properties-common \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install LLVM 18
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh ${LLVM_VERSION} all && \
+    rm llvm.sh
+
+# Set LLVM 18 as default
+RUN update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_VERSION} 100
+
+# Python dependencies for pipeline
+COPY pipeline/requirements.txt /tmp/requirements.txt
+RUN pip3 install --break-system-packages -r /tmp/requirements.txt
+
+WORKDIR /workspace
+
+# Copy source tree
+COPY . /workspace/
+
+# Build everything
+RUN mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release \
+             -DLLVM_DIR=$(llvm-config-18 --cmakedir) && \
+    make -j$(nproc)
+
+ENTRYPOINT ["python3", "pipeline/build.py"]

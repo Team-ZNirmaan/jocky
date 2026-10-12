@@ -1,0 +1,8 @@
+// network_connections.jky — sockets mapped to PIDs, DNS cache, ARP, routes (Both)
+artifact network_connections {
+  requires L0
+  emits sockets, dns_cache, arp, routes, ifaces
+
+  collect network_connections
+  collect network_connections | hash_all | upload
+}

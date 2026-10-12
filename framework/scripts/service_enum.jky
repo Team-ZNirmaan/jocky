@@ -1,0 +1,8 @@
+// service_enum.jky — installed services with binary paths and account names (L0)
+artifact service_enum {
+  requires L0
+  emits services
+
+  collect service_enum
+  collect service_enum | hash_all | upload
+}

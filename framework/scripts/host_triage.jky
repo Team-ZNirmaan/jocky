@@ -1,0 +1,15 @@
+// host_triage.jky — host triage: process tree, services, persistence (L0)
+//
+// Windows-canonical: `collect scheduled_tasks` is a Windows-only opcode, so
+// this artifact type-checks under --target=windows.
+artifact host_triage {
+  requires L0
+  emits processes, services, drivers, scheduled_tasks, autoruns
+
+  collect proc_meta
+  collect service_enum
+  collect scheduled_tasks
+  collect persistence
+  collect proc_meta | filter(parent == "cmd.exe") | timeline
+  hash_all | upload
+}

@@ -1,0 +1,8 @@
+// ioc_sweep.jky — sweep artifacts against IOC lists (Both)
+artifact ioc_sweep {
+  requires L0
+  emits matches, file_hashes, ips, domains, yara_hits
+
+  collect proc_meta
+  collect proc_meta | ioc_check | alert | upload
+}

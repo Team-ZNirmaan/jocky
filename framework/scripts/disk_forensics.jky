@@ -1,0 +1,11 @@
+// disk_forensics.jky — deep disk forensics (Windows, admin)
+artifact disk_forensics {
+  requires L1
+  emits mft, usn, prefetch, shimcache, amcache, srum
+
+  collect MFT
+  collect USN
+  collect prefetch
+  collect shimcache_amcache
+  collect MFT | timeline | hash_all | upload
+}

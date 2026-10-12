@@ -1,0 +1,26 @@
+# Build
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Generated
+compiler/src/lexer/jocky_lexer.cpp
+compiler/src/lexer/jocky_lexer.h
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Docker
+*.log

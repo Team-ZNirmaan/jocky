@@ -1,0 +1,8 @@
+// registry_forensics.jky — offline hive parsing: SAM, SYSTEM, SOFTWARE, NTUSER (Windows)
+artifact registry_forensics {
+  requires L1
+  emits sam, system, software, ntuser, usrclass
+
+  collect registry
+  collect registry | hash_all | upload
+}

@@ -1,0 +1,10 @@
+// evtlog_parse.jky — Security/System/Sysmon/PowerShell event log parsing (Windows)
+artifact evtlog_parse {
+  requires L1
+  emits security, system, sysmon, powershell, taskscheduler
+
+  collect evtlog("Security")
+  collect evtlog("System")
+  collect evtlog("Microsoft-Windows-Sysmon/Operational")
+  collect evtlog("Security") | timeline | hash_all | upload
+}

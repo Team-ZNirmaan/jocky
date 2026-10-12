@@ -1,0 +1,8 @@
+// autoruns.jky — comprehensive autostart enumeration (Windows)
+artifact autoruns {
+  requires L0
+  emits aseps, shell_ext, print_monitors, winsock, browser_ext
+
+  collect autoruns
+  collect autoruns | filter(name == "sysmon") | upload
+}

@@ -1,0 +1,33 @@
+name: JOCKEY CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/${{ github.repository }}/jockey-build:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+                   -DLLVM_DIR=$(llvm-config-18 --cmakedir)
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
+
+      - name: Lint (clang-tidy)
+        run: |
+          cd build
+          run-clang-tidy-18 -p . ../compiler/src/ ../passes/ ../runtime/

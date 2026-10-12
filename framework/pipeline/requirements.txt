@@ -1,0 +1,4 @@
+# Python dependencies for the JOCKEY build pipeline (Phase 8).
+# Pinned for reproducibility inside the docker/Dockerfile.pipeline image.
+pyyaml==6.0.2
+requests==2.32.3

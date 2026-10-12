@@ -1,0 +1,8 @@
+// network_capture.jky — packet capture, flow summary, protocol stats (Both)
+artifact network_capture {
+  requires L1
+  emits packets, flows, protocols, dns_queries
+
+  collect network_capture
+  collect network_capture | filter(protocol == "dns") | timeline | upload
+}
